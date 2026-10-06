@@ -182,20 +182,23 @@ namespace CustomExplorerApp
                         
                         // Reverse so the newest events show at the top of the table
                         lines.reverse().forEach(line => {
-                            if (!line.trim()) return;
+                            const cleanLine = line.trim();
+                            if (!cleanLine) return;
                             
-                            let time = '-', action = '-', file = line;
+                            let time = '-', action = '-', file = cleanLine;
                             
-                            // Auto-detect JSON vs Plain Text
-                            if (line.startsWith('{')) {
+                            // 1. Try JSON parsing
+                            if (cleanLine.startsWith('{') && cleanLine.endsWith('}')) {
                                 try {
-                                    const data = JSON.parse(line);
+                                    const data = JSON.parse(cleanLine);
                                     time = data.time || '-';
                                     action = data.action || '-';
                                     file = data.file || '-';
                                 } catch (e) {}
-                            } else {
-                                const match = line.match(/^\[(.*?)\] (.*?): (.*)$/);
+                            } 
+                            // 2. Try Standard Text format: [YYYY-MM-DD HH:mm:ss] ACTION: Path
+                            else {
+                                const match = cleanLine.match(/^\[(.*?)\]\s+([A-Z]+):\s+(.*)$/i);
                                 if (match) {
                                     time = match[1];
                                     action = match[2];

@@ -1,0 +1,40 @@
+name: Build and Release LiveLog-Explorer
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Publish Single-File Executable
+        run: |
+          dotnet publish CustomExplorerApp.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o ./publish-out
+
+      - name: Update Latest Release
+        uses: softprops/action-gh-release@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: latest
+          name: "LiveLog Explorer (Latest Build)"
+          body: |
+            Automated build from commit `${{ github.sha }}`.
+            Download `LiveLog-Explorer.exe` below.
+          draft: false
+          prerelease: false
+          files: ./publish-out/LiveLog-Explorer.exe

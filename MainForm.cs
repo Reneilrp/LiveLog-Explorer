@@ -703,6 +703,7 @@ del ""%~f0""
                 if (AppSettings.EnableWebUI)
                     Process.Start(new ProcessStartInfo { FileName = $"http://localhost:{AppSettings.WebPort}", UseShellExecute = true });
             });
+            trayMenu.Items.Add("📜 Open Logs Folder", null, (s, e) => OpenLogsFolder());
             trayMenu.Items.Add("⚙️ Settings", null, (s, e) => OpenSettingsDialog());
             trayMenu.Items.Add(new ToolStripSeparator());
             trayMenu.Items.Add("❌ Exit Completely", null, (s, e) => ExitApplication());
@@ -723,6 +724,23 @@ del ""%~f0""
                 {
                     statusInfoLabel.Text = $"⚙️ Settings updated! Log format: {AppSettings.LogFormat}";
                 }
+            }
+        }
+
+        private void OpenLogsFolder()
+        {
+            try
+            {
+                string dir = AppSettings.LogDirectory;
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = dir,
+                    UseShellExecute = true
+                });
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Could not open logs folder: " + ex.Message, "Logs", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
         }
 

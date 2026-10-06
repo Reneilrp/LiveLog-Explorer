@@ -313,18 +313,23 @@ namespace CustomExplorerApp
                                 latestDownloadUrl = downloadUrlProp.GetString() ?? "";
                             }
 
-                            // Read release body to check commit sha or check published_at
-                            if (root.TryGetProperty("body", out var bodyProp))
+                            // Check release publish timestamp against local assembly build time
+                            if (asset.TryGetProperty("updated_at", out var updatedProp) &&
+                                DateTime.TryParse(updatedProp.GetString(), out DateTime releaseTime))
                             {
-                                string body = bodyProp.GetString() ?? "";
-                                // If latest commit differs from current build, alert user
-                                if (!string.IsNullOrEmpty(latestDownloadUrl))
+                                string exePath = Process.GetCurrentProcess().MainModule?.FileName ?? "";
+                                if (File.Exists(exePath))
                                 {
-                                    this.Invoke((Action)(() =>
+                                    DateTime localTime = File.GetLastWriteTimeUtc(exePath);
+                                    // Only show update banner if GitHub release is more than 30 seconds newer than running exe
+                                    if (releaseTime > localTime.AddSeconds(30))
                                     {
-                                        updateBannerLabel.Text = "✨ New build available on GitHub!";
-                                        updateBanner.Visible = true;
-                                    }));
+                                        this.Invoke((Action)(() =>
+                                        {
+                                            updateBannerLabel.Text = "✨ A newer build is available on GitHub!";
+                                            updateBanner.Visible = true;
+                                        }));
+                                    }
                                 }
                             }
                         }

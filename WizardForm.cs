@@ -16,14 +16,14 @@ namespace CustomExplorerApp
         public WizardForm()
         {
             this.Text = "LiveLog Explorer - Quick Setup";
-            this.Size = new Size(460, 420);
-            this.MinimumSize = new Size(460, 420);
-            this.MaximumSize = new Size(460, 420);
+            this.Size = new Size(500, 460);
+            this.MinimumSize = new Size(500, 460);
+            this.MaximumSize = new Size(500, 460);
             this.StartPosition = FormStartPosition.CenterScreen;
             this.FormBorderStyle = FormBorderStyle.FixedDialog;
             this.MaximizeBox = false;
             this.MinimizeBox = false;
-            this.BackColor = Color.FromArgb(248, 249, 252);
+            this.BackColor = Color.White;
             this.Font = new Font("Segoe UI", 9.5f, FontStyle.Regular);
 
             BuildUi();
@@ -31,126 +31,164 @@ namespace CustomExplorerApp
 
         private void BuildUi()
         {
-            // Header Banner
-            Panel headerPanel = new Panel();
-            headerPanel.Dock = DockStyle.Top;
-            headerPanel.Height = 70;
-            headerPanel.BackColor = Color.FromArgb(25, 30, 45);
-            headerPanel.Padding = new Padding(20, 14, 20, 10);
+            // Modern Clean Header
+            Panel headerPanel = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 76,
+                BackColor = Color.FromArgb(246, 248, 252),
+                Padding = new Padding(24, 16, 24, 12)
+            };
 
-            Label titleLabel = new Label();
-            titleLabel.Text = "LiveLog Explorer Setup";
-            titleLabel.Font = new Font("Segoe UI", 12f, FontStyle.Bold);
-            titleLabel.ForeColor = Color.White;
-            titleLabel.AutoSize = true;
+            Label titleLabel = new Label
+            {
+                Text = "LiveLog Explorer Setup",
+                Font = new Font("Segoe UI", 13f, FontStyle.Bold),
+                ForeColor = Color.FromArgb(25, 30, 45),
+                AutoSize = true
+            };
             headerPanel.Controls.Add(titleLabel);
 
-            Label subtitleLabel = new Label();
-            subtitleLabel.Text = "Configure tracking & dashboard preferences";
-            subtitleLabel.Font = new Font("Segoe UI", 9f);
-            subtitleLabel.ForeColor = Color.FromArgb(160, 175, 200);
-            subtitleLabel.Location = new Point(20, 38);
-            subtitleLabel.AutoSize = true;
+            Label subtitleLabel = new Label
+            {
+                Text = "Configure tracking & live dashboard preferences",
+                Font = new Font("Segoe UI", 9f),
+                ForeColor = Color.FromArgb(100, 110, 125),
+                Location = new Point(24, 42),
+                AutoSize = true
+            };
             headerPanel.Controls.Add(subtitleLabel);
 
+            Panel headerBorder = new Panel
+            {
+                Dock = DockStyle.Bottom,
+                Height = 1,
+                BackColor = Color.FromArgb(225, 230, 240)
+            };
+            headerPanel.Controls.Add(headerBorder);
             this.Controls.Add(headerPanel);
 
-            // Content Panel
-            Panel contentPanel = new Panel();
-            contentPanel.Dock = DockStyle.Fill;
-            contentPanel.Padding = new Padding(24, 15, 24, 15);
+            int y = 98;
 
-            int y = 85;
-
-            // Group 1: Web Dashboard Toggle
-            webUiCheck = new CheckBox();
-            webUiCheck.Text = "Enable Live Web Dashboard";
-            webUiCheck.Font = new Font("Segoe UI", 10f, FontStyle.Bold);
-            webUiCheck.ForeColor = Color.FromArgb(30, 35, 45);
-            webUiCheck.Location = new Point(25, y);
-            webUiCheck.Size = new Size(300, 24);
-            webUiCheck.Checked = true;
+            // Option 1: Web Dashboard Toggle
+            webUiCheck = new CheckBox
+            {
+                Text = "Enable Live Web Dashboard",
+                Font = new Font("Segoe UI", 10f, FontStyle.Bold),
+                ForeColor = Color.FromArgb(30, 35, 45),
+                Location = new Point(28, y),
+                Size = new Size(320, 24),
+                Checked = true,
+                Cursor = Cursors.Hand
+            };
             this.Controls.Add(webUiCheck);
-            y += 35;
+            y += 40;
 
-            // Group 2: Port
-            Label portLabel = new Label();
-            portLabel.Text = "Web Dashboard Port:";
-            portLabel.ForeColor = Color.FromArgb(70, 75, 85);
-            portLabel.Location = new Point(25, y);
-            portLabel.Size = new Size(160, 24);
+            // Option 2: Port
+            Label portLabel = new Label
+            {
+                Text = "Dashboard Port:",
+                ForeColor = Color.FromArgb(70, 75, 85),
+                Location = new Point(28, y + 2),
+                Size = new Size(130, 22)
+            };
             this.Controls.Add(portLabel);
 
-            portText = new TextBox();
-            portText.Text = "9999";
-            portText.Location = new Point(190, y - 2);
-            portText.Size = new Size(90, 26);
-            portText.BorderStyle = BorderStyle.FixedSingle;
+            portText = new TextBox
+            {
+                Text = "9999",
+                Location = new Point(170, y),
+                Size = new Size(100, 26),
+                Font = new Font("Segoe UI", 9.5f),
+                BorderStyle = BorderStyle.FixedSingle,
+                BackColor = Color.FromArgb(248, 249, 252)
+            };
             this.Controls.Add(portText);
-            y += 38;
+            y += 42;
 
-            // Group 3: Log Format
-            Label formatLabel = new Label();
-            formatLabel.Text = "Logging Format:";
-            formatLabel.ForeColor = Color.FromArgb(70, 75, 85);
-            formatLabel.Location = new Point(25, y);
-            formatLabel.Size = new Size(160, 24);
+            // Option 3: Logging Format
+            Label formatLabel = new Label
+            {
+                Text = "Logging Format:",
+                ForeColor = Color.FromArgb(70, 75, 85),
+                Location = new Point(28, y + 2),
+                Size = new Size(130, 22)
+            };
             this.Controls.Add(formatLabel);
 
-            formatCombo = new ComboBox();
-            formatCombo.Location = new Point(190, y - 2);
-            formatCombo.Size = new Size(120, 26);
-            formatCombo.DropDownStyle = ComboBoxStyle.DropDownList;
+            formatCombo = new ComboBox
+            {
+                Location = new Point(170, y),
+                Size = new Size(120, 26),
+                Font = new Font("Segoe UI", 9.5f),
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                BackColor = Color.FromArgb(248, 249, 252)
+            };
             formatCombo.Items.AddRange(new object[] { "Text", "JSON" });
             formatCombo.SelectedIndex = 0;
             this.Controls.Add(formatCombo);
-            y += 42;
+            y += 46;
 
-            // Group 4: Default Folder
-            Label folderLabel = new Label();
-            folderLabel.Text = "Initial Startup Folder (Optional):";
-            folderLabel.ForeColor = Color.FromArgb(70, 75, 85);
-            folderLabel.Location = new Point(25, y);
-            folderLabel.Size = new Size(300, 20);
+            // Option 4: Startup Folder
+            Label folderLabel = new Label
+            {
+                Text = "Default Project Root (Optional):",
+                ForeColor = Color.FromArgb(70, 75, 85),
+                Location = new Point(28, y),
+                Size = new Size(300, 20)
+            };
             this.Controls.Add(folderLabel);
             y += 24;
 
-            folderText = new TextBox();
-            folderText.Location = new Point(25, y);
-            folderText.Size = new Size(295, 26);
-            folderText.BorderStyle = BorderStyle.FixedSingle;
-            folderText.ReadOnly = true;
-            folderText.BackColor = Color.White;
-            folderText.Text = @"C:\Users";
+            folderText = new TextBox
+            {
+                Location = new Point(28, y),
+                Size = new Size(330, 26),
+                Font = new Font("Segoe UI", 9.5f),
+                BorderStyle = BorderStyle.FixedSingle,
+                ReadOnly = true,
+                BackColor = Color.FromArgb(248, 249, 252),
+                Text = @"C:\Users"
+            };
             this.Controls.Add(folderText);
 
-            browseButton = new Button();
-            browseButton.Text = "Browse...";
-            browseButton.Location = new Point(328, y - 1);
-            browseButton.Size = new Size(82, 28);
-            browseButton.FlatStyle = FlatStyle.Flat;
-            browseButton.BackColor = Color.FromArgb(235, 238, 245);
-            browseButton.ForeColor = Color.FromArgb(40, 45, 55);
-            browseButton.Cursor = Cursors.Hand;
-            browseButton.Click += (s, e) => {
-                using (var fbd = new FolderBrowserDialog()) {
+            browseButton = new Button
+            {
+                Text = "Browse...",
+                Location = new Point(366, y - 1),
+                Size = new Size(90, 28),
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Color.FromArgb(240, 242, 248),
+                ForeColor = Color.FromArgb(40, 45, 60),
+                Font = new Font("Segoe UI", 9f),
+                Cursor = Cursors.Hand
+            };
+            browseButton.FlatAppearance.BorderSize = 0;
+            browseButton.FlatAppearance.MouseOverBackColor = Color.FromArgb(230, 235, 245);
+            browseButton.Click += (s, e) =>
+            {
+                using (var fbd = new FolderBrowserDialog())
+                {
                     if (fbd.ShowDialog() == DialogResult.OK) folderText.Text = fbd.SelectedPath;
                 }
             };
             this.Controls.Add(browseButton);
-            y += 55;
+            y += 58;
 
-            // Launch Button
-            startButton = new Button();
-            startButton.Text = "🚀  Launch Explorer";
-            startButton.Location = new Point(25, y);
-            startButton.Size = new Size(385, 42);
-            startButton.FlatStyle = FlatStyle.Flat;
+            // Launch Button (Fluent Primary Button)
+            startButton = new Button
+            {
+                Text = "🚀  Launch Explorer",
+                Location = new Point(28, y),
+                Size = new Size(428, 44),
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Color.FromArgb(0, 103, 192),
+                ForeColor = Color.White,
+                Font = new Font("Segoe UI", 10.5f, FontStyle.Bold),
+                Cursor = Cursors.Hand
+            };
             startButton.FlatAppearance.BorderSize = 0;
-            startButton.BackColor = Color.FromArgb(40, 110, 230);
-            startButton.ForeColor = Color.White;
-            startButton.Font = new Font("Segoe UI", 10.5f, FontStyle.Bold);
-            startButton.Cursor = Cursors.Hand;
+            startButton.FlatAppearance.MouseOverBackColor = Color.FromArgb(0, 90, 170);
             startButton.Click += StartButton_Click;
             this.Controls.Add(startButton);
         }

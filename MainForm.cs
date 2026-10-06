@@ -11,22 +11,23 @@ namespace CustomExplorerApp
 {
     public class MainForm : Form
     {
-        private Panel topPanel;
-        private Panel searchPanel;
-        private Panel statusPanel;
+        private Panel navBarPanel;
         private Panel updateBanner;
         private Label updateBannerLabel;
         private Button updateBannerButton;
-        private TextBox pathTextBox;
-        private TextBox searchBox;
+        private Button backButton;
         private Button upButton;
         private Button refreshButton;
-        private Button browseButton;
-        private Button webUiButton;
+        private TextBox pathTextBox;
+        private TextBox searchBox;
+        private Button dashboardButton;
+        private Panel sidebarPanel;
         private ListView fileListView;
+        private StatusStrip statusStrip;
+        private ToolStripStatusLabel statusInfoLabel;
+        private ToolStripStatusLabel statusCountLabel;
         private ImageList imageList;
-        private Label statusLabel;
-        private Label countLabel;
+        private ImageList sidebarImageList;
         private string currentDirectory = @"C:\Users";
         private const string CurrentVersion = "1.0.1";
         private string latestDownloadUrl = "";
@@ -37,17 +38,16 @@ namespace CustomExplorerApp
         public MainForm()
         {
             this.Text = "LiveLog Explorer (v" + CurrentVersion + ")";
-            this.Size = new Size(880, 620);
-            this.MinimumSize = new Size(640, 420);
+            this.Size = new Size(980, 640);
+            this.MinimumSize = new Size(780, 480);
             this.StartPosition = FormStartPosition.CenterScreen;
             this.Font = new Font("Segoe UI", 9.5f, FontStyle.Regular);
-            this.BackColor = Color.FromArgb(245, 246, 250);
+            this.BackColor = Color.FromArgb(249, 250, 252);
 
-            InitializeImageList();
+            InitializeIcons();
             InitializeSystemTray();
             BuildUi();
 
-            // Set starting directory from settings or default
             string startFolder = @"C:\Users";
             if (!string.IsNullOrEmpty(AppSettings.DefaultFolder) && Directory.Exists(AppSettings.DefaultFolder))
             {
@@ -55,49 +55,50 @@ namespace CustomExplorerApp
             }
             LoadDirectory(startFolder);
 
-            // Check for updates asynchronously in background on startup
             Task.Run(CheckForUpdatesAsync);
         }
 
-        private void InitializeImageList()
+        private void InitializeIcons()
         {
-            imageList = new ImageList();
-            imageList.ImageSize = new Size(20, 20);
-            imageList.ColorDepth = ColorDepth.Depth32Bit;
+            imageList = new ImageList { ImageSize = new Size(18, 18), ColorDepth = ColorDepth.Depth32Bit };
 
-            // Draw clean vector-like folder icon
-            Bitmap folderBmp = new Bitmap(20, 20);
+            // Sleek Modern Windows 11 style folder icon
+            Bitmap folderBmp = new Bitmap(18, 18);
             using (Graphics g = Graphics.FromImage(folderBmp))
             {
                 g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
                 g.Clear(Color.Transparent);
-                using (Brush tabBrush = new SolidBrush(Color.FromArgb(235, 175, 40)))
-                    g.FillRectangle(tabBrush, 2, 3, 7, 5);
-                using (Brush folderBrush = new SolidBrush(Color.FromArgb(250, 200, 60)))
-                    g.FillPath(folderBrush, GetRoundedRect(new RectangleF(1, 5, 18, 12), 2));
+                using (Brush tabBrush = new SolidBrush(Color.FromArgb(240, 185, 55)))
+                    g.FillRectangle(tabBrush, 1, 2, 7, 5);
+                using (Brush folderBrush = new SolidBrush(Color.FromArgb(255, 210, 75)))
+                    g.FillPath(folderBrush, GetRoundedRect(new RectangleF(0, 4, 18, 12), 2));
             }
             imageList.Images.Add("folder", folderBmp);
 
-            // Draw clean file icon
-            Bitmap fileBmp = new Bitmap(20, 20);
+            // Clean Document File icon
+            Bitmap fileBmp = new Bitmap(18, 18);
             using (Graphics g = Graphics.FromImage(fileBmp))
             {
                 g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
                 g.Clear(Color.Transparent);
-                using (Brush pageBrush = new SolidBrush(Color.FromArgb(255, 255, 255)))
-                using (Pen borderPen = new Pen(Color.FromArgb(160, 175, 200), 1.5f))
+                using (Brush bgBrush = new SolidBrush(Color.White))
+                using (Pen borderPen = new Pen(Color.FromArgb(180, 190, 205), 1.2f))
                 {
-                    g.FillRectangle(pageBrush, 3, 2, 13, 16);
-                    g.DrawRectangle(borderPen, 3, 2, 13, 16);
+                    g.FillRectangle(bgBrush, 2, 1, 14, 16);
+                    g.DrawRectangle(borderPen, 2, 1, 14, 16);
                 }
-                using (Brush lineBrush = new SolidBrush(Color.FromArgb(180, 190, 210)))
+                using (Brush lineBrush = new SolidBrush(Color.FromArgb(195, 205, 220)))
                 {
-                    g.FillRectangle(lineBrush, 6, 6, 7, 2);
-                    g.FillRectangle(lineBrush, 6, 10, 7, 2);
-                    g.FillRectangle(lineBrush, 6, 14, 5, 2);
+                    g.FillRectangle(lineBrush, 5, 5, 8, 2);
+                    g.FillRectangle(lineBrush, 5, 9, 8, 2);
+                    g.FillRectangle(lineBrush, 5, 13, 5, 2);
                 }
             }
             imageList.Images.Add("file", fileBmp);
+
+            // Sidebar shortcut icons
+            sidebarImageList = new ImageList { ImageSize = new Size(16, 16), ColorDepth = ColorDepth.Depth32Bit };
+            sidebarImageList.Images.Add("folder", folderBmp);
         }
 
         private System.Drawing.Drawing2D.GraphicsPath GetRoundedRect(RectangleF r, float radius)
@@ -113,180 +114,290 @@ namespace CustomExplorerApp
 
         private void BuildUi()
         {
-            // Update Notification Banner (Hidden by default)
-            updateBanner = new Panel();
-            updateBanner.Dock = DockStyle.Top;
-            updateBanner.Height = 36;
-            updateBanner.BackColor = Color.FromArgb(220, 245, 235);
-            updateBanner.Padding = new Padding(14, 6, 14, 6);
-            updateBanner.Visible = false;
-
-            updateBannerLabel = new Label();
-            updateBannerLabel.Text = "🎉 A new update is available on GitHub!";
-            updateBannerLabel.Font = new Font("Segoe UI", 9.5f, FontStyle.Bold);
-            updateBannerLabel.ForeColor = Color.FromArgb(10, 100, 60);
-            updateBannerLabel.AutoSize = true;
-            updateBannerLabel.Location = new Point(14, 8);
+            // 1. Update Notification Banner
+            updateBanner = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 36,
+                BackColor = Color.FromArgb(230, 248, 238),
+                Padding = new Padding(14, 4, 14, 4),
+                Visible = false
+            };
+            updateBannerLabel = new Label
+            {
+                Text = "✨ A newer version is available on GitHub!",
+                Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
+                ForeColor = Color.FromArgb(15, 115, 65),
+                AutoSize = true,
+                Location = new Point(14, 8)
+            };
             updateBanner.Controls.Add(updateBannerLabel);
 
             updateBannerButton = CreateStyledButton("📥 Update Now", Color.FromArgb(15, 140, 85), Color.White);
-            updateBannerButton.Location = new Point(350, 4);
+            updateBannerButton.Location = new Point(360, 4);
             updateBannerButton.Size = new Size(125, 28);
             updateBannerButton.Click += (s, e) => DownloadAndApplyUpdate();
             updateBanner.Controls.Add(updateBannerButton);
 
-            Button dismissBtn = new Button();
-            dismissBtn.Text = "✕";
-            dismissBtn.FlatStyle = FlatStyle.Flat;
+            Button dismissBtn = new Button
+            {
+                Text = "✕",
+                FlatStyle = FlatStyle.Flat,
+                Size = new Size(26, 26),
+                Location = new Point(495, 4),
+                ForeColor = Color.FromArgb(120, 130, 140)
+            };
             dismissBtn.FlatAppearance.BorderSize = 0;
-            dismissBtn.Size = new Size(26, 26);
-            dismissBtn.Location = new Point(485, 4);
-            dismissBtn.ForeColor = Color.FromArgb(120, 130, 140);
             dismissBtn.Click += (s, e) => updateBanner.Visible = false;
             updateBanner.Controls.Add(dismissBtn);
 
-            // Top Navigation Bar
-            topPanel = new Panel();
-            topPanel.Dock = DockStyle.Top;
-            topPanel.Height = 52;
-            topPanel.Padding = new Padding(12, 10, 12, 6);
-            topPanel.BackColor = Color.FromArgb(255, 255, 255);
+            // 2. Windows 11 Fluent Navigation Bar (TableLayoutPanel for responsive grid)
+            navBarPanel = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 48,
+                BackColor = Color.White,
+                Padding = new Padding(10, 8, 10, 8)
+            };
 
-            upButton = CreateStyledButton("⬆ Back", Color.FromArgb(235, 240, 248), Color.FromArgb(40, 90, 170));
-            upButton.Location = new Point(12, 10);
-            upButton.Size = new Size(68, 32);
-            upButton.Click += UpButton_Click;
-            topPanel.Controls.Add(upButton);
+            TableLayoutPanel navTable = new TableLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                ColumnCount = 7,
+                RowCount = 1,
+                BackColor = Color.White
+            };
+            navTable.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 36)); // Back
+            navTable.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 36)); // Up
+            navTable.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 36)); // Refresh
+            navTable.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 65));   // Address Bar
+            navTable.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 70)); // Browse
+            navTable.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 35));   // Search
+            navTable.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 110));// Dashboard Button
 
-            refreshButton = CreateStyledButton("🔄", Color.FromArgb(240, 242, 246), Color.FromArgb(60, 65, 75));
-            refreshButton.Location = new Point(86, 10);
-            refreshButton.Size = new Size(36, 32);
-            refreshButton.Click += (s, e) => LoadDirectory(currentDirectory);
-            topPanel.Controls.Add(refreshButton);
+            backButton = CreateIconButton("←", "Previous Directory", (s, e) => UpButton_Click(s, e));
+            upButton = CreateIconButton("↑", "Up to Parent", (s, e) => UpButton_Click(s, e));
+            refreshButton = CreateIconButton("🔄", "Refresh", (s, e) => LoadDirectory(currentDirectory));
 
-            pathTextBox = new TextBox();
-            pathTextBox.Location = new Point(128, 12);
-            pathTextBox.Size = new Size(500, 26);
-            pathTextBox.Font = new Font("Segoe UI", 10f);
-            pathTextBox.BorderStyle = BorderStyle.FixedSingle;
-            pathTextBox.BackColor = Color.FromArgb(250, 251, 254);
-            pathTextBox.ForeColor = Color.FromArgb(30, 35, 45);
-            pathTextBox.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-            pathTextBox.KeyDown += (s, e) => {
+            // Address Box with clean border
+            pathTextBox = new TextBox
+            {
+                Dock = DockStyle.Fill,
+                Font = new Font("Segoe UI", 9.5f),
+                BorderStyle = BorderStyle.FixedSingle,
+                BackColor = Color.FromArgb(248, 249, 252),
+                ForeColor = Color.FromArgb(30, 35, 45)
+            };
+            pathTextBox.KeyDown += (s, e) =>
+            {
                 if (e.KeyCode == Keys.Enter && Directory.Exists(pathTextBox.Text))
                 {
                     LoadDirectory(pathTextBox.Text);
                     e.SuppressKeyPress = true;
                 }
             };
-            topPanel.Controls.Add(pathTextBox);
 
-            browseButton = CreateStyledButton("📁 Browse", Color.FromArgb(240, 242, 246), Color.FromArgb(50, 55, 65));
-            browseButton.Location = new Point(636, 10);
-            browseButton.Size = new Size(84, 32);
-            browseButton.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            browseButton.Click += BrowseButton_Click;
-            topPanel.Controls.Add(browseButton);
+            Button browseBtn = CreateStyledButton("📁 Browse", Color.FromArgb(240, 242, 247), Color.FromArgb(50, 55, 65));
+            browseBtn.Dock = DockStyle.Fill;
+            browseBtn.Click += BrowseButton_Click;
 
-            webUiButton = CreateStyledButton("🌐 Dashboard", Color.FromArgb(235, 248, 242), Color.FromArgb(20, 140, 80));
-            webUiButton.Location = new Point(726, 10);
-            webUiButton.Size = new Size(102, 32);
-            webUiButton.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            webUiButton.Click += (s, e) => {
+            // Integrated Search Box with placeholder text
+            searchBox = new TextBox
+            {
+                Dock = DockStyle.Fill,
+                Font = new Font("Segoe UI", 9.5f),
+                BorderStyle = BorderStyle.FixedSingle,
+                BackColor = Color.FromArgb(248, 249, 252),
+                ForeColor = Color.FromArgb(90, 95, 105)
+            };
+            searchBox.Text = "🔍 Filter files...";
+            searchBox.Enter += (s, e) => { if (searchBox.Text == "🔍 Filter files...") searchBox.Text = ""; };
+            searchBox.Leave += (s, e) => { if (string.IsNullOrWhiteSpace(searchBox.Text)) searchBox.Text = "🔍 Filter files..."; };
+            searchBox.TextChanged += (s, e) =>
+            {
+                if (searchBox.Text != "🔍 Filter files...") FilterItems(searchBox.Text);
+            };
+
+            dashboardButton = CreateStyledButton("🌐 Dashboard", Color.FromArgb(235, 248, 242), Color.FromArgb(15, 135, 75));
+            dashboardButton.Dock = DockStyle.Fill;
+            dashboardButton.Click += (s, e) =>
+            {
                 if (AppSettings.EnableWebUI)
                 {
-                    try {
-                        Process.Start(new ProcessStartInfo { FileName = $"http://localhost:{AppSettings.WebPort}", UseShellExecute = true });
-                    } catch { }
+                    try { Process.Start(new ProcessStartInfo { FileName = $"http://localhost:{AppSettings.WebPort}", UseShellExecute = true }); } catch { }
                 }
                 else
                 {
                     MessageBox.Show("Web Dashboard was disabled in the startup wizard.", "Dashboard", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
             };
-            topPanel.Controls.Add(webUiButton);
 
-            // Search / Filter Bar
-            searchPanel = new Panel();
-            searchPanel.Dock = DockStyle.Top;
-            searchPanel.Height = 36;
-            searchPanel.Padding = new Padding(12, 4, 12, 6);
-            searchPanel.BackColor = Color.FromArgb(255, 255, 255);
+            navTable.Controls.Add(backButton, 0, 0);
+            navTable.Controls.Add(upButton, 1, 0);
+            navTable.Controls.Add(refreshButton, 2, 0);
+            navTable.Controls.Add(pathTextBox, 3, 0);
+            navTable.Controls.Add(browseBtn, 4, 0);
+            navTable.Controls.Add(searchBox, 5, 0);
+            navTable.Controls.Add(dashboardButton, 6, 0);
+            navBarPanel.Controls.Add(navTable);
 
-            Label searchLabel = new Label();
-            searchLabel.Text = "Filter:";
-            searchLabel.Location = new Point(14, 8);
-            searchLabel.AutoSize = true;
-            searchLabel.ForeColor = Color.FromArgb(110, 115, 125);
-            searchPanel.Controls.Add(searchLabel);
+            // 3. Status Bar at Bottom
+            statusStrip = new StatusStrip
+            {
+                BackColor = Color.FromArgb(245, 246, 250),
+                Font = new Font("Segoe UI", 9f),
+                SizingGrip = true
+            };
+            statusInfoLabel = new ToolStripStatusLabel
+            {
+                Text = "🟢 Live Tracker Active - Ready",
+                Spring = true,
+                TextAlign = ContentAlignment.MiddleLeft,
+                ForeColor = Color.FromArgb(60, 70, 85)
+            };
+            statusCountLabel = new ToolStripStatusLabel
+            {
+                Text = "0 folders, 0 files",
+                ForeColor = Color.FromArgb(110, 120, 135)
+            };
+            statusStrip.Items.Add(statusInfoLabel);
+            statusStrip.Items.Add(statusCountLabel);
 
-            searchBox = new TextBox();
-            searchBox.Location = new Point(65, 5);
-            searchBox.Size = new Size(240, 24);
-            searchBox.Font = new Font("Segoe UI", 9f);
-            searchBox.BorderStyle = BorderStyle.FixedSingle;
-            searchBox.TextChanged += (s, e) => FilterItems(searchBox.Text);
-            searchPanel.Controls.Add(searchBox);
+            // 4. Quick Access Shortcuts Sidebar (Left)
+            sidebarPanel = new Panel
+            {
+                Dock = DockStyle.Left,
+                Width = 190,
+                BackColor = Color.FromArgb(248, 249, 252),
+                Padding = new Padding(8, 12, 8, 12)
+            };
 
-            // Status Bar at Bottom
-            statusPanel = new Panel();
-            statusPanel.Dock = DockStyle.Bottom;
-            statusPanel.Height = 28;
-            statusPanel.BackColor = Color.FromArgb(240, 242, 247);
-            statusPanel.Padding = new Padding(12, 5, 12, 5);
+            Label quickAccessLabel = new Label
+            {
+                Text = "QUICK ACCESS",
+                Font = new Font("Segoe UI", 7.5f, FontStyle.Bold),
+                ForeColor = Color.FromArgb(140, 145, 160),
+                Location = new Point(12, 10),
+                AutoSize = true
+            };
+            sidebarPanel.Controls.Add(quickAccessLabel);
 
-            statusLabel = new Label();
-            statusLabel.Dock = DockStyle.Left;
-            statusLabel.AutoSize = true;
-            statusLabel.ForeColor = Color.FromArgb(90, 100, 115);
-            statusLabel.Font = new Font("Segoe UI", 8.5f);
-            statusLabel.Text = "Ready - Double click any file to log and open";
-            statusPanel.Controls.Add(statusLabel);
+            int sidebarY = 32;
+            string userHome = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+            string desktopPath = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
+            string docsPath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
 
-            countLabel = new Label();
-            countLabel.Dock = DockStyle.Right;
-            countLabel.AutoSize = true;
-            countLabel.ForeColor = Color.FromArgb(90, 100, 115);
-            countLabel.Font = new Font("Segoe UI", 8.5f);
-            statusPanel.Controls.Add(countLabel);
+            AddSidebarItem("🏠 User Home", userHome, ref sidebarY);
+            AddSidebarItem("🖥 Desktop", desktopPath, ref sidebarY);
+            AddSidebarItem("📄 Documents", docsPath, ref sidebarY);
+            AddSidebarItem("💾 C:\\ Drive", @"C:\", ref sidebarY);
 
-            // Main ListView with Explorer Columns
-            fileListView = new ListView();
-            fileListView.Dock = DockStyle.Fill;
-            fileListView.View = View.Details;
-            fileListView.FullRowSelect = true;
-            fileListView.GridLines = false;
-            fileListView.SmallImageList = imageList;
-            fileListView.Font = new Font("Segoe UI", 9.5f);
-            fileListView.BorderStyle = BorderStyle.None;
-            fileListView.BackColor = Color.FromArgb(255, 255, 255);
-            fileListView.ForeColor = Color.FromArgb(35, 40, 50);
+            if (!string.IsNullOrEmpty(AppSettings.DefaultFolder) && Directory.Exists(AppSettings.DefaultFolder))
+            {
+                AddSidebarItem("⭐ Project Root", AppSettings.DefaultFolder, ref sidebarY);
+            }
 
-            // Columns
-            fileListView.Columns.Add("Name", 380);
+            // Divider between sidebar and file grid
+            Panel divider = new Panel
+            {
+                Dock = DockStyle.Left,
+                Width = 1,
+                BackColor = Color.FromArgb(230, 233, 240)
+            };
+
+            // 5. Main ListView with Modern Windows 11 Styling
+            fileListView = new ListView
+            {
+                Dock = DockStyle.Fill,
+                View = View.Details,
+                FullRowSelect = true,
+                GridLines = false,
+                SmallImageList = imageList,
+                Font = new Font("Segoe UI", 9.5f),
+                BorderStyle = BorderStyle.None,
+                BackColor = Color.White,
+                ForeColor = Color.FromArgb(30, 35, 45)
+            };
+            fileListView.Columns.Add("Name", 320);
+            fileListView.Columns.Add("Date modified", 150);
             fileListView.Columns.Add("Type", 120);
-            fileListView.Columns.Add("Date Modified", 160);
-            fileListView.Columns.Add("Size", 100);
+            fileListView.Columns.Add("Size", 90);
 
             fileListView.DoubleClick += FileListView_DoubleClick;
+            fileListView.KeyDown += (s, e) =>
+            {
+                if (e.KeyCode == Keys.Enter && fileListView.SelectedItems.Count > 0)
+                {
+                    FileListView_DoubleClick(s, e);
+                    e.SuppressKeyPress = true;
+                }
+                else if (e.KeyCode == Keys.Back)
+                {
+                    UpButton_Click(s, e);
+                    e.SuppressKeyPress = true;
+                }
+            };
 
+            // Add Controls
             this.Controls.Add(fileListView);
-            this.Controls.Add(statusPanel);
-            this.Controls.Add(searchPanel);
-            this.Controls.Add(topPanel);
+            this.Controls.Add(divider);
+            this.Controls.Add(sidebarPanel);
+            this.Controls.Add(statusStrip);
+            this.Controls.Add(navBarPanel);
             this.Controls.Add(updateBanner);
+        }
+
+        private void AddSidebarItem(string label, string path, ref int y)
+        {
+            Button btn = new Button
+            {
+                Text = "  " + label,
+                TextAlign = ContentAlignment.MiddleLeft,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 9f),
+                BackColor = Color.Transparent,
+                ForeColor = Color.FromArgb(50, 55, 70),
+                Location = new Point(4, y),
+                Size = new Size(180, 30),
+                Cursor = Cursors.Hand
+            };
+            btn.FlatAppearance.BorderSize = 0;
+            btn.FlatAppearance.MouseOverBackColor = Color.FromArgb(235, 238, 246);
+            btn.Click += (s, e) => { if (Directory.Exists(path)) LoadDirectory(path); };
+            sidebarPanel.Controls.Add(btn);
+            y += 34;
+        }
+
+        private Button CreateIconButton(string icon, string tooltip, EventHandler onClick)
+        {
+            Button btn = new Button
+            {
+                Text = icon,
+                Dock = DockStyle.Fill,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 10.5f, FontStyle.Bold),
+                BackColor = Color.FromArgb(245, 246, 250),
+                ForeColor = Color.FromArgb(60, 65, 80),
+                Cursor = Cursors.Hand
+            };
+            btn.FlatAppearance.BorderSize = 0;
+            btn.FlatAppearance.MouseOverBackColor = Color.FromArgb(230, 234, 244);
+            btn.Click += onClick;
+            return btn;
         }
 
         private Button CreateStyledButton(string text, Color bg, Color fg)
         {
-            var btn = new Button();
-            btn.Text = text;
-            btn.FlatStyle = FlatStyle.Flat;
+            var btn = new Button
+            {
+                Text = text,
+                FlatStyle = FlatStyle.Flat,
+                BackColor = bg,
+                ForeColor = fg,
+                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
+                Cursor = Cursors.Hand
+            };
             btn.FlatAppearance.BorderSize = 0;
-            btn.BackColor = bg;
-            btn.ForeColor = fg;
-            btn.Font = new Font("Segoe UI", 9f, FontStyle.Bold);
-            btn.Cursor = Cursors.Hand;
             return btn;
         }
 
@@ -313,12 +424,10 @@ namespace CustomExplorerApp
                                 latestDownloadUrl = downloadUrlProp.GetString() ?? "";
                             }
 
-                            // Check remote release version against current running version
                             string remoteVersionStr = "";
                             if (root.TryGetProperty("name", out var nameProp))
                             {
                                 string title = nameProp.GetString() ?? "";
-                                // Look for 'vX.Y.Z' or 'X.Y.Z'
                                 var match = System.Text.RegularExpressions.Regex.Match(title, @"\b(\d+\.\d+\.\d+)\b");
                                 if (match.Success) remoteVersionStr = match.Groups[1].Value;
                             }
@@ -409,43 +518,43 @@ namespace CustomExplorerApp
             {
                 currentDirectory = path;
                 pathTextBox.Text = path;
-                searchBox.Text = "";
+                if (searchBox.Text != "🔍 Filter files...") searchBox.Text = "🔍 Filter files...";
                 fileListView.Items.Clear();
 
                 DirectoryInfo dir = new DirectoryInfo(path);
                 int folderCount = 0;
                 int fileCount = 0;
 
-                // Folders
+                // Load Folders
                 foreach (DirectoryInfo subDir in dir.GetDirectories())
                 {
                     if ((subDir.Attributes & FileAttributes.Hidden) != 0 && subDir.Name.StartsWith("$")) continue;
 
                     var item = new ListViewItem(subDir.Name, "folder");
                     item.Tag = subDir.FullName;
-                    item.SubItems.Add("File folder");
                     item.SubItems.Add(subDir.LastWriteTime.ToString("yyyy-MM-dd HH:mm"));
+                    item.SubItems.Add("File folder");
                     item.SubItems.Add("");
                     fileListView.Items.Add(item);
                     folderCount++;
                 }
 
-                // Files
+                // Load Files
                 foreach (FileInfo file in dir.GetFiles())
                 {
                     if ((file.Attributes & FileAttributes.Hidden) != 0 && file.Name.StartsWith("~$")) continue;
 
                     var item = new ListViewItem(file.Name, "file");
                     item.Tag = file.FullName;
-                    item.SubItems.Add(file.Extension.ToUpper() + " File");
                     item.SubItems.Add(file.LastWriteTime.ToString("yyyy-MM-dd HH:mm"));
+                    item.SubItems.Add(file.Extension.ToUpper() + " File");
                     item.SubItems.Add(FormatFileSize(file.Length));
                     fileListView.Items.Add(item);
                     fileCount++;
                 }
 
-                countLabel.Text = $"{folderCount} folders, {fileCount} files";
-                statusLabel.Text = $"Showing: {path}";
+                statusCountLabel.Text = $"{folderCount} folders, {fileCount} files";
+                statusInfoLabel.Text = $"📁 {path}";
             }
             catch (UnauthorizedAccessException)
             {
@@ -460,7 +569,7 @@ namespace CustomExplorerApp
 
         private void FilterItems(string filter)
         {
-            if (string.IsNullOrWhiteSpace(filter))
+            if (string.IsNullOrWhiteSpace(filter) || filter == "🔍 Filter files...")
             {
                 LoadDirectory(currentDirectory);
                 return;
@@ -521,7 +630,7 @@ namespace CustomExplorerApp
 
                 File.AppendAllText(AppSettings.LogFilePath, logMessage);
 
-                statusLabel.Text = $"Last opened: {Path.GetFileName(filePath)} at {timestamp}";
+                statusInfoLabel.Text = $"📝 Logged: {Path.GetFileName(filePath)} at {timestamp}";
 
                 ProcessStartInfo psi = new ProcessStartInfo
                 {

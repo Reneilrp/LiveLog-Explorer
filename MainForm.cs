@@ -163,7 +163,7 @@ namespace CustomExplorerApp
             TableLayoutPanel navTable = new TableLayoutPanel
             {
                 Dock = DockStyle.Fill,
-                ColumnCount = 7,
+                ColumnCount = 8,
                 RowCount = 1,
                 BackColor = Color.White
             };
@@ -174,6 +174,7 @@ namespace CustomExplorerApp
             navTable.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 70)); // Browse
             navTable.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 35));   // Search
             navTable.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 110));// Dashboard Button
+            navTable.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 40)); // Settings Button
 
             backButton = CreateIconButton("←", "Previous Directory", (s, e) => UpButton_Click(s, e));
             upButton = CreateIconButton("↑", "Up to Parent", (s, e) => UpButton_Click(s, e));
@@ -232,6 +233,8 @@ namespace CustomExplorerApp
                 }
             };
 
+            Button settingsButton = CreateIconButton("⚙️", "Preferences & Settings", (s, e) => OpenSettingsDialog());
+
             navTable.Controls.Add(backButton, 0, 0);
             navTable.Controls.Add(upButton, 1, 0);
             navTable.Controls.Add(refreshButton, 2, 0);
@@ -239,6 +242,7 @@ namespace CustomExplorerApp
             navTable.Controls.Add(browseBtn, 4, 0);
             navTable.Controls.Add(searchBox, 5, 0);
             navTable.Controls.Add(dashboardButton, 6, 0);
+            navTable.Controls.Add(settingsButton, 7, 0);
             navBarPanel.Controls.Add(navTable);
 
             // 3. Status Bar at Bottom
@@ -653,6 +657,7 @@ namespace CustomExplorerApp
                 if (AppSettings.EnableWebUI)
                     Process.Start(new ProcessStartInfo { FileName = $"http://localhost:{AppSettings.WebPort}", UseShellExecute = true });
             });
+            trayMenu.Items.Add("⚙️ Settings", null, (s, e) => OpenSettingsDialog());
             trayMenu.Items.Add(new ToolStripSeparator());
             trayMenu.Items.Add("❌ Exit Completely", null, (s, e) => ExitApplication());
 
@@ -662,6 +667,17 @@ namespace CustomExplorerApp
             trayIcon.ContextMenuStrip = trayMenu;
             trayIcon.Visible = true;
             trayIcon.DoubleClick += (s, e) => RestoreFromTray();
+        }
+
+        private void OpenSettingsDialog()
+        {
+            using (var settingsWizard = new WizardForm(isSettingsMode: true))
+            {
+                if (settingsWizard.ShowDialog(this) == DialogResult.OK)
+                {
+                    statusInfoLabel.Text = $"⚙️ Settings updated! Log format: {AppSettings.LogFormat}";
+                }
+            }
         }
 
         protected override void OnFormClosing(FormClosingEventArgs e)

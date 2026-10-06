@@ -12,10 +12,12 @@ namespace CustomExplorerApp
         private TextBox folderText;
         private Button browseButton;
         private Button startButton;
+        private bool isSettingsMode;
 
-        public WizardForm()
+        public WizardForm(bool isSettingsMode = false)
         {
-            this.Text = "LiveLog Explorer - Quick Setup";
+            this.isSettingsMode = isSettingsMode;
+            this.Text = isSettingsMode ? "LiveLog Explorer - Settings" : "LiveLog Explorer - Quick Setup";
             this.Size = new Size(500, 460);
             this.MinimumSize = new Size(500, 460);
             this.MaximumSize = new Size(500, 460);
@@ -42,7 +44,7 @@ namespace CustomExplorerApp
 
             Label titleLabel = new Label
             {
-                Text = "LiveLog Explorer Setup",
+                Text = isSettingsMode ? "Explorer Settings" : "LiveLog Explorer Setup",
                 Font = new Font("Segoe UI", 13f, FontStyle.Bold),
                 ForeColor = Color.FromArgb(25, 30, 45),
                 AutoSize = true
@@ -51,7 +53,7 @@ namespace CustomExplorerApp
 
             Label subtitleLabel = new Label
             {
-                Text = "Configure tracking & live dashboard preferences",
+                Text = isSettingsMode ? "Adjust your logging format, ports, or root folder" : "Configure tracking & live dashboard preferences",
                 Font = new Font("Segoe UI", 9f),
                 ForeColor = Color.FromArgb(100, 110, 125),
                 Location = new Point(24, 42),
@@ -78,7 +80,7 @@ namespace CustomExplorerApp
                 ForeColor = Color.FromArgb(30, 35, 45),
                 Location = new Point(28, y),
                 Size = new Size(320, 24),
-                Checked = true,
+                Checked = AppSettings.EnableWebUI,
                 Cursor = Cursors.Hand
             };
             this.Controls.Add(webUiCheck);
@@ -96,7 +98,7 @@ namespace CustomExplorerApp
 
             portText = new TextBox
             {
-                Text = "9999",
+                Text = AppSettings.WebPort.ToString(),
                 Location = new Point(170, y),
                 Size = new Size(100, 26),
                 Font = new Font("Segoe UI", 9.5f),
@@ -125,7 +127,8 @@ namespace CustomExplorerApp
                 BackColor = Color.FromArgb(248, 249, 252)
             };
             formatCombo.Items.AddRange(new object[] { "Text", "JSON" });
-            formatCombo.SelectedIndex = 0;
+            formatCombo.SelectedItem = AppSettings.LogFormat;
+            if (formatCombo.SelectedIndex == -1) formatCombo.SelectedIndex = 0;
             this.Controls.Add(formatCombo);
             y += 46;
 
@@ -148,7 +151,7 @@ namespace CustomExplorerApp
                 BorderStyle = BorderStyle.FixedSingle,
                 ReadOnly = true,
                 BackColor = Color.FromArgb(248, 249, 252),
-                Text = @"C:\Users"
+                Text = string.IsNullOrEmpty(AppSettings.DefaultFolder) ? @"C:\Users" : AppSettings.DefaultFolder
             };
             this.Controls.Add(folderText);
 
@@ -169,16 +172,17 @@ namespace CustomExplorerApp
             {
                 using (var fbd = new FolderBrowserDialog())
                 {
+                    fbd.SelectedPath = folderText.Text;
                     if (fbd.ShowDialog() == DialogResult.OK) folderText.Text = fbd.SelectedPath;
                 }
             };
             this.Controls.Add(browseButton);
             y += 58;
 
-            // Launch Button (Fluent Primary Button)
+            // Action Button
             startButton = new Button
             {
-                Text = "🚀  Launch Explorer",
+                Text = isSettingsMode ? "💾  Save Changes" : "🚀  Launch Explorer",
                 Location = new Point(28, y),
                 Size = new Size(428, 44),
                 FlatStyle = FlatStyle.Flat,

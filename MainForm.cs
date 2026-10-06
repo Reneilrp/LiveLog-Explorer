@@ -27,6 +27,7 @@ namespace CustomExplorerApp
         private ImageList imageList;
         private Label statusLabel;
         private Label countLabel;
+        private string currentDirectory = @"C:\Users";
         private const string CurrentVersion = "1.0.1";
         private string latestDownloadUrl = "";
         private NotifyIcon trayIcon;

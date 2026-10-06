@@ -38,11 +38,10 @@ namespace CustomExplorerApp
         static void StartWebServer(string[] args)
         {
             try 
-            {
                 var builder = WebApplication.CreateBuilder(args);
+                builder.Logging.ClearProviders(); // Suppress background logging console hooks
+                builder.WebHost.UseUrls($"http://localhost:{AppSettings.WebPort}", $"http://127.0.0.1:{AppSettings.WebPort}");
                 var app = builder.Build();
-
-                app.Urls.Add($"http://localhost:{AppSettings.WebPort}");
 
                 // --- ENDPOINT 1: Serve the beautifully styled HTML/JS page ---
                 app.MapGet("/", async context =>

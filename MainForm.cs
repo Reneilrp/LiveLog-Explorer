@@ -462,29 +462,75 @@ namespace CustomExplorerApp
             catch { }
         }
 
-        private void DownloadAndApplyUpdate()
+        private async void DownloadAndApplyUpdate()
         {
             if (string.IsNullOrEmpty(latestDownloadUrl))
             {
-                latestDownloadUrl = "https://github.com/Reneilrp/LiveLog-Explorer/releases/latest";
+                latestDownloadUrl = "https://github.com/Reneilrp/LiveLog-Explorer/releases/download/latest/LiveLog-Explorer.exe";
             }
 
-            var result = MessageBox.Show(
-                "Would you like to open the latest release download page in your browser?\n\nClick 'Yes' to download, or 'No' to cancel.",
-                "Update LiveLog Explorer",
-                MessageBoxButtons.YesNo,
-                MessageBoxIcon.Information);
+            updateBannerButton.Enabled = false;
+            updateBannerButton.Text = "⏳ Downloading...";
 
-            if (result == DialogResult.Yes)
+            try
             {
-                try
+                string currentExePath = Process.GetCurrentProcess().MainModule?.FileName ?? "";
+                if (string.IsNullOrEmpty(currentExePath) || !File.Exists(currentExePath))
                 {
-                    Process.Start(new ProcessStartInfo { FileName = latestDownloadUrl, UseShellExecute = true });
+                    MessageBox.Show("Could not determine current executable path.", "Update Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    updateBannerButton.Enabled = true;
+                    updateBannerButton.Text = "📥 Update Now";
+                    return;
                 }
-                catch (Exception ex)
+
+                string tempDownloadPath = Path.Combine(Path.GetTempPath(), "LiveLog-Update-" + Guid.NewGuid().ToString("N") + ".exe");
+                string updaterScriptPath = Path.Combine(Path.GetTempPath(), "livelog_updater.bat");
+
+                // 1. Download latest .exe directly into temp folder
+                using (HttpClient client = new HttpClient())
                 {
-                    MessageBox.Show("Could not open browser: " + ex.Message);
+                    client.DefaultRequestHeaders.UserAgent.ParseAdd("LiveLog-Explorer");
+                    var fileBytes = await client.GetByteArrayAsync(latestDownloadUrl);
+                    await File.WriteAllBytesAsync(tempDownloadPath, fileBytes);
                 }
+
+                // 2. Create helper batch script to swap the executable and restart
+                int currentPid = Process.GetCurrentProcess().Id;
+                string scriptContent = $@"@echo off
+rem Wait for the running application to exit
+:loop
+tasklist /fi ""PID eq {currentPid}"" | find ""{currentPid}"" > nul
+if not errorlevel 1 (
+    timeout /t 1 /nobreak > nul
+    goto loop
+)
+rem Replace old executable with updated build
+move /y ""{tempDownloadPath}"" ""{currentExePath}"" > nul
+rem Launch updated application
+start """" ""{currentExePath}""
+rem Delete this updater script
+del ""%~f0""
+";
+                await File.WriteAllTextAsync(updaterScriptPath, scriptContent);
+
+                // 3. Launch background updater process
+                ProcessStartInfo psi = new ProcessStartInfo
+                {
+                    FileName = "cmd.exe",
+                    Arguments = $"/c \"{updaterScriptPath}\"",
+                    CreateNoWindow = true,
+                    UseShellExecute = false
+                };
+                Process.Start(psi);
+
+                // 4. Exit this application completely so Windows releases file lock
+                ExitApplication();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Failed to download update: " + ex.Message, "Update Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                updateBannerButton.Enabled = true;
+                updateBannerButton.Text = "📥 Update Now";
             }
         }
 

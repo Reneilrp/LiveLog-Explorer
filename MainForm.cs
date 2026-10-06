@@ -27,8 +27,7 @@ namespace CustomExplorerApp
         private ImageList imageList;
         private Label statusLabel;
         private Label countLabel;
-        private string currentDirectory = @"C:\Users";
-        private const string CurrentVersion = "v1.0.0";
+        private const string CurrentVersion = "1.0.1";
         private string latestDownloadUrl = "";
         private NotifyIcon trayIcon;
         private ContextMenuStrip trayMenu;
@@ -36,7 +35,7 @@ namespace CustomExplorerApp
 
         public MainForm()
         {
-            this.Text = "LiveLog Explorer (" + CurrentVersion + ")";
+            this.Text = "LiveLog Explorer (v" + CurrentVersion + ")";
             this.Size = new Size(880, 620);
             this.MinimumSize = new Size(640, 420);
             this.StartPosition = FormStartPosition.CenterScreen;
@@ -313,23 +312,33 @@ namespace CustomExplorerApp
                                 latestDownloadUrl = downloadUrlProp.GetString() ?? "";
                             }
 
-                            // Check release publish timestamp against local assembly build time
-                            if (asset.TryGetProperty("updated_at", out var updatedProp) &&
-                                DateTime.TryParse(updatedProp.GetString(), out DateTime releaseTime))
+                            // Check remote release version against current running version
+                            string remoteVersionStr = "";
+                            if (root.TryGetProperty("name", out var nameProp))
                             {
-                                string exePath = Process.GetCurrentProcess().MainModule?.FileName ?? "";
-                                if (File.Exists(exePath))
+                                string title = nameProp.GetString() ?? "";
+                                // Look for 'vX.Y.Z' or 'X.Y.Z'
+                                var match = System.Text.RegularExpressions.Regex.Match(title, @"\b(\d+\.\d+\.\d+)\b");
+                                if (match.Success) remoteVersionStr = match.Groups[1].Value;
+                            }
+
+                            if (string.IsNullOrEmpty(remoteVersionStr) && root.TryGetProperty("body", out var bProp))
+                            {
+                                string body = bProp.GetString() ?? "";
+                                var match = System.Text.RegularExpressions.Regex.Match(body, @"version:\s*(\d+\.\d+\.\d+)");
+                                if (match.Success) remoteVersionStr = match.Groups[1].Value;
+                            }
+
+                            if (Version.TryParse(remoteVersionStr, out Version remoteVer) &&
+                                Version.TryParse(CurrentVersion, out Version localVer))
+                            {
+                                if (remoteVer > localVer)
                                 {
-                                    DateTime localTime = File.GetLastWriteTimeUtc(exePath);
-                                    // Only show update banner if GitHub release is more than 30 seconds newer than running exe
-                                    if (releaseTime > localTime.AddSeconds(30))
+                                    this.Invoke((Action)(() =>
                                     {
-                                        this.Invoke((Action)(() =>
-                                        {
-                                            updateBannerLabel.Text = "✨ A newer build is available on GitHub!";
-                                            updateBanner.Visible = true;
-                                        }));
-                                    }
+                                        updateBannerLabel.Text = $"✨ New version v{remoteVer} is available on GitHub!";
+                                        updateBanner.Visible = true;
+                                    }));
                                 }
                             }
                         }

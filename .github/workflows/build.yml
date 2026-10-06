@@ -31,9 +31,10 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: latest
-          name: "LiveLog Explorer"
+          name: "LiveLog Explorer v1.0.1"
           body: |
-            Build commit: ${{ github.sha }}
+            version: 1.0.1
+            commit: ${{ github.sha }}
           draft: false
           prerelease: false
           files: ./publish-out/LiveLog-Explorer.exe

@@ -8,77 +8,253 @@ namespace CustomExplorerApp
 {
     public class MainForm : Form
     {
-        private ListBox fileListBox;
+        private Panel topPanel;
+        private Panel searchPanel;
+        private Panel statusPanel;
         private TextBox pathTextBox;
-        private Button browseButton;
+        private TextBox searchBox;
         private Button upButton;
-        private string currentDirectory;
+        private Button refreshButton;
+        private Button browseButton;
+        private Button webUiButton;
+        private ListView fileListView;
+        private ImageList imageList;
+        private Label statusLabel;
+        private Label countLabel;
+        private string currentDirectory = @"C:\Users";
 
         public MainForm()
         {
-            this.Text = "Custom Tracker & Explorer";
-            this.Size = new Size(600, 500);
+            this.Text = "LiveLog Explorer";
+            this.Size = new Size(880, 600);
+            this.MinimumSize = new Size(640, 420);
             this.StartPosition = FormStartPosition.CenterScreen;
+            this.Font = new Font("Segoe UI", 9.5f, FontStyle.Regular);
+            this.BackColor = Color.FromArgb(245, 246, 250);
 
-            // Top Bar: Up Button
-            upButton = new Button();
-            upButton.Text = "⬆ Up";
-            upButton.Location = new Point(10, 10);
-            upButton.Size = new Size(50, 25);
-            upButton.Click += UpButton_Click;
-            this.Controls.Add(upButton);
+            InitializeImageList();
+            BuildUi();
 
-            // Top Bar: Path Text Box
-            pathTextBox = new TextBox();
-            pathTextBox.Location = new Point(65, 12);
-            pathTextBox.Size = new Size(425, 20);
-            pathTextBox.ReadOnly = true;
-            this.Controls.Add(pathTextBox);
-
-            // Top Bar: Browse Button
-            browseButton = new Button();
-            browseButton.Text = "Select Folder";
-            browseButton.Location = new Point(500, 10);
-            browseButton.Size = new Size(80, 25);
-            browseButton.Click += BrowseButton_Click;
-            this.Controls.Add(browseButton);
-
-            // Main Area: File List
-            fileListBox = new ListBox();
-            fileListBox.Location = new Point(10, 45);
-            fileListBox.Size = new Size(570, 400);
-            fileListBox.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
-            fileListBox.DoubleClick += FileListBox_DoubleClick;
-            this.Controls.Add(fileListBox);
-
-            // Determine Root/Starting Folder
-            string startingFolder = @"C:\Users"; // Default to C:\Users
-            
-            // If they picked a specific folder in the Wizard, use that instead
+            // Set starting directory from settings or default
+            string startFolder = @"C:\Users";
             if (!string.IsNullOrEmpty(AppSettings.DefaultFolder) && Directory.Exists(AppSettings.DefaultFolder))
             {
-                startingFolder = AppSettings.DefaultFolder;
+                startFolder = AppSettings.DefaultFolder;
             }
-            // Alternatively, to start exactly in their specific user folder automatically:
-            // startingFolder = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+            LoadDirectory(startFolder);
+        }
 
-            LoadDirectory(startingFolder);
+        private void InitializeImageList()
+        {
+            imageList = new ImageList();
+            imageList.ImageSize = new Size(20, 20);
+            imageList.ColorDepth = ColorDepth.Depth32Bit;
+
+            // Draw clean vector-like folder icon
+            Bitmap folderBmp = new Bitmap(20, 20);
+            using (Graphics g = Graphics.FromImage(folderBmp))
+            {
+                g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+                g.Clear(Color.Transparent);
+                using (Brush tabBrush = new SolidBrush(Color.FromArgb(235, 175, 40)))
+                    g.FillRectangle(tabBrush, 2, 3, 7, 5);
+                using (Brush folderBrush = new SolidBrush(Color.FromArgb(250, 200, 60)))
+                    g.FillPath(folderBrush, GetRoundedRect(new RectangleF(1, 5, 18, 12), 2));
+            }
+            imageList.Images.Add("folder", folderBmp);
+
+            // Draw clean file icon
+            Bitmap fileBmp = new Bitmap(20, 20);
+            using (Graphics g = Graphics.FromImage(fileBmp))
+            {
+                g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+                g.Clear(Color.Transparent);
+                using (Brush pageBrush = new SolidBrush(Color.FromArgb(255, 255, 255)))
+                using (Pen borderPen = new Pen(Color.FromArgb(160, 175, 200), 1.5f))
+                {
+                    g.FillRectangle(pageBrush, 3, 2, 13, 16);
+                    g.DrawRectangle(borderPen, 3, 2, 13, 16);
+                }
+                using (Brush lineBrush = new SolidBrush(Color.FromArgb(180, 190, 210)))
+                {
+                    g.FillRectangle(lineBrush, 6, 6, 7, 2);
+                    g.FillRectangle(lineBrush, 6, 10, 7, 2);
+                    g.FillRectangle(lineBrush, 6, 14, 5, 2);
+                }
+            }
+            imageList.Images.Add("file", fileBmp);
+        }
+
+        private System.Drawing.Drawing2D.GraphicsPath GetRoundedRect(RectangleF r, float radius)
+        {
+            var path = new System.Drawing.Drawing2D.GraphicsPath();
+            path.AddArc(r.X, r.Y, radius * 2, radius * 2, 180, 90);
+            path.AddArc(r.Right - 2 * radius, r.Y, 2 * radius, 2 * radius, 270, 90);
+            path.AddArc(r.Right - 2 * radius, r.Bottom - 2 * radius, 2 * radius, 2 * radius, 0, 90);
+            path.AddArc(r.X, r.Bottom - 2 * radius, 2 * radius, 2 * radius, 90, 90);
+            path.CloseFigure();
+            return path;
+        }
+
+        private void BuildUi()
+        {
+            // Top Navigation Bar
+            topPanel = new Panel();
+            topPanel.Dock = DockStyle.Top;
+            topPanel.Height = 52;
+            topPanel.Padding = new Padding(12, 10, 12, 6);
+            topPanel.BackColor = Color.FromArgb(255, 255, 255);
+
+            upButton = CreateStyledButton("⬆ Back", Color.FromArgb(235, 240, 248), Color.FromArgb(40, 90, 170));
+            upButton.Location = new Point(12, 10);
+            upButton.Size = new Size(68, 32);
+            upButton.Click += UpButton_Click;
+            topPanel.Controls.Add(upButton);
+
+            refreshButton = CreateStyledButton("🔄", Color.FromArgb(240, 242, 246), Color.FromArgb(60, 65, 75));
+            refreshButton.Location = new Point(86, 10);
+            refreshButton.Size = new Size(36, 32);
+            refreshButton.Click += (s, e) => LoadDirectory(currentDirectory);
+            topPanel.Controls.Add(refreshButton);
+
+            pathTextBox = new TextBox();
+            pathTextBox.Location = new Point(128, 12);
+            pathTextBox.Size = new Size(500, 26);
+            pathTextBox.Font = new Font("Segoe UI", 10f);
+            pathTextBox.BorderStyle = BorderStyle.FixedSingle;
+            pathTextBox.BackColor = Color.FromArgb(250, 251, 254);
+            pathTextBox.ForeColor = Color.FromArgb(30, 35, 45);
+            pathTextBox.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+            pathTextBox.KeyDown += (s, e) => {
+                if (e.KeyCode == Keys.Enter && Directory.Exists(pathTextBox.Text))
+                {
+                    LoadDirectory(pathTextBox.Text);
+                    e.SuppressKeyPress = true;
+                }
+            };
+            topPanel.Controls.Add(pathTextBox);
+
+            browseButton = CreateStyledButton("📁 Browse", Color.FromArgb(240, 242, 246), Color.FromArgb(50, 55, 65));
+            browseButton.Location = new Point(636, 10);
+            browseButton.Size = new Size(84, 32);
+            browseButton.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            browseButton.Click += BrowseButton_Click;
+            topPanel.Controls.Add(browseButton);
+
+            webUiButton = CreateStyledButton("🌐 Dashboard", Color.FromArgb(235, 248, 242), Color.FromArgb(20, 140, 80));
+            webUiButton.Location = new Point(726, 10);
+            webUiButton.Size = new Size(102, 32);
+            webUiButton.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            webUiButton.Click += (s, e) => {
+                if (AppSettings.EnableWebUI)
+                {
+                    try {
+                        Process.Start(new ProcessStartInfo { FileName = $"http://localhost:{AppSettings.WebPort}", UseShellExecute = true });
+                    } catch { }
+                }
+                else
+                {
+                    MessageBox.Show("Web Dashboard was disabled in the startup wizard.", "Dashboard", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+            };
+            topPanel.Controls.Add(webUiButton);
+
+            // Search / Filter Bar
+            searchPanel = new Panel();
+            searchPanel.Dock = DockStyle.Top;
+            searchPanel.Height = 36;
+            searchPanel.Padding = new Padding(12, 4, 12, 6);
+            searchPanel.BackColor = Color.FromArgb(255, 255, 255);
+
+            Label searchLabel = new Label();
+            searchLabel.Text = "Filter:";
+            searchLabel.Location = new Point(14, 8);
+            searchLabel.AutoSize = true;
+            searchLabel.ForeColor = Color.FromArgb(110, 115, 125);
+            searchPanel.Controls.Add(searchLabel);
+
+            searchBox = new TextBox();
+            searchBox.Location = new Point(65, 5);
+            searchBox.Size = new Size(240, 24);
+            searchBox.Font = new Font("Segoe UI", 9f);
+            searchBox.BorderStyle = BorderStyle.FixedSingle;
+            searchBox.TextChanged += (s, e) => FilterItems(searchBox.Text);
+            searchPanel.Controls.Add(searchBox);
+
+            // Status Bar at Bottom
+            statusPanel = new Panel();
+            statusPanel.Dock = DockStyle.Bottom;
+            statusPanel.Height = 28;
+            statusPanel.BackColor = Color.FromArgb(240, 242, 247);
+            statusPanel.Padding = new Padding(12, 5, 12, 5);
+
+            statusLabel = new Label();
+            statusLabel.Dock = DockStyle.Left;
+            statusLabel.AutoSize = true;
+            statusLabel.ForeColor = Color.FromArgb(90, 100, 115);
+            statusLabel.Font = new Font("Segoe UI", 8.5f);
+            statusLabel.Text = "Ready - Double click any file to log and open";
+            statusPanel.Controls.Add(statusLabel);
+
+            countLabel = new Label();
+            countLabel.Dock = DockStyle.Right;
+            countLabel.AutoSize = true;
+            countLabel.ForeColor = Color.FromArgb(90, 100, 115);
+            countLabel.Font = new Font("Segoe UI", 8.5f);
+            statusPanel.Controls.Add(countLabel);
+
+            // Main ListView with Explorer Columns
+            fileListView = new ListView();
+            fileListView.Dock = DockStyle.Fill;
+            fileListView.View = View.Details;
+            fileListView.FullRowSelect = true;
+            fileListView.GridLines = false;
+            fileListView.SmallImageList = imageList;
+            fileListView.Font = new Font("Segoe UI", 9.5f);
+            fileListView.BorderStyle = BorderStyle.None;
+            fileListView.BackColor = Color.FromArgb(255, 255, 255);
+            fileListView.ForeColor = Color.FromArgb(35, 40, 50);
+
+            // Columns
+            fileListView.Columns.Add("Name", 380);
+            fileListView.Columns.Add("Type", 120);
+            fileListView.Columns.Add("Date Modified", 160);
+            fileListView.Columns.Add("Size", 100);
+
+            fileListView.DoubleClick += FileListView_DoubleClick;
+
+            this.Controls.Add(fileListView);
+            this.Controls.Add(statusPanel);
+            this.Controls.Add(searchPanel);
+            this.Controls.Add(topPanel);
+        }
+
+        private Button CreateStyledButton(string text, Color bg, Color fg)
+        {
+            var btn = new Button();
+            btn.Text = text;
+            btn.FlatStyle = FlatStyle.Flat;
+            btn.FlatAppearance.BorderSize = 0;
+            btn.BackColor = bg;
+            btn.ForeColor = fg;
+            btn.Font = new Font("Segoe UI", 9f, FontStyle.Bold);
+            btn.Cursor = Cursors.Hand;
+            return btn;
         }
 
         private void UpButton_Click(object sender, EventArgs e)
         {
             try
             {
-                // Get the parent directory
-                DirectoryInfo parentInfo = Directory.GetParent(currentDirectory);
-                if (parentInfo != null)
+                DirectoryInfo parent = Directory.GetParent(currentDirectory);
+                if (parent != null)
                 {
-                    LoadDirectory(parentInfo.FullName);
+                    LoadDirectory(parent.FullName);
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Cannot go up further: " + ex.Message);
+                MessageBox.Show("Cannot navigate up: " + ex.Message, "Notice", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
         }
 
@@ -86,7 +262,7 @@ namespace CustomExplorerApp
         {
             using (var fbd = new FolderBrowserDialog())
             {
-                fbd.SelectedPath = currentDirectory; // Start the dialog where we currently are
+                fbd.SelectedPath = currentDirectory;
                 if (fbd.ShowDialog() == DialogResult.OK)
                 {
                     LoadDirectory(fbd.SelectedPath);
@@ -98,55 +274,99 @@ namespace CustomExplorerApp
         {
             try
             {
-                fileListBox.Items.Clear();
                 currentDirectory = path;
                 pathTextBox.Text = path;
+                searchBox.Text = "";
+                fileListView.Items.Clear();
 
-                // 1. Load Sub-Folders first
-                string[] folders = Directory.GetDirectories(path);
-                foreach (string folder in folders)
+                DirectoryInfo dir = new DirectoryInfo(path);
+                int folderCount = 0;
+                int fileCount = 0;
+
+                // Folders
+                foreach (DirectoryInfo subDir in dir.GetDirectories())
                 {
-                    fileListBox.Items.Add($"📁 {Path.GetFileName(folder)}");
+                    // Skip hidden system directories like $RECYCLE.BIN
+                    if ((subDir.Attributes & FileAttributes.Hidden) != 0 && subDir.Name.StartsWith("$")) continue;
+
+                    var item = new ListViewItem(subDir.Name, "folder");
+                    item.Tag = subDir.FullName;
+                    item.SubItems.Add("File folder");
+                    item.SubItems.Add(subDir.LastWriteTime.ToString("yyyy-MM-dd HH:mm"));
+                    item.SubItems.Add("");
+                    fileListView.Items.Add(item);
+                    folderCount++;
                 }
 
-                // 2. Load Files below the folders
-                string[] files = Directory.GetFiles(path);
-                foreach (string file in files)
+                // Files
+                foreach (FileInfo file in dir.GetFiles())
                 {
-                    fileListBox.Items.Add(Path.GetFileName(file));
+                    if ((file.Attributes & FileAttributes.Hidden) != 0 && file.Name.StartsWith("~$")) continue;
+
+                    var item = new ListViewItem(file.Name, "file");
+                    item.Tag = file.FullName;
+                    item.SubItems.Add(file.Extension.ToUpper() + " File");
+                    item.SubItems.Add(file.LastWriteTime.ToString("yyyy-MM-dd HH:mm"));
+                    item.SubItems.Add(FormatFileSize(file.Length));
+                    fileListView.Items.Add(item);
+                    fileCount++;
                 }
+
+                countLabel.Text = $"{folderCount} folders, {fileCount} files";
+                statusLabel.Text = $"Showing: {path}";
             }
             catch (UnauthorizedAccessException)
             {
-                MessageBox.Show("You do not have permission to view this folder.", "Access Denied", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                UpButton_Click(null, null); // Bounce them back up
+                MessageBox.Show("Access Denied to this directory.", "Permission", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                UpButton_Click(null, null);
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Error reading folder: " + ex.Message);
+                MessageBox.Show("Error opening folder: " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
-        private void FileListBox_DoubleClick(object sender, EventArgs e)
+        private void FilterItems(string filter)
         {
-            if (fileListBox.SelectedItem != null)
+            if (string.IsNullOrWhiteSpace(filter))
             {
-                string selectedItem = fileListBox.SelectedItem.ToString();
-                
-                // Check if they clicked a folder or a file
-                if (selectedItem.StartsWith("📁 "))
+                LoadDirectory(currentDirectory);
+                return;
+            }
+
+            filter = filter.ToLower();
+            for (int i = fileListView.Items.Count - 1; i >= 0; i--)
+            {
+                var item = fileListView.Items[i];
+                if (!item.Text.ToLower().Contains(filter))
                 {
-                    // It's a folder! Navigate into it.
-                    string folderName = selectedItem.Substring(3); // Remove the emoji and space
-                    string fullFolderPath = Path.Combine(currentDirectory, folderName);
-                    LoadDirectory(fullFolderPath);
+                    fileListView.Items.RemoveAt(i);
                 }
-                else
-                {
-                    // It's a file! Open and log it.
-                    string fullFilePath = Path.Combine(currentDirectory, selectedItem);
-                    OpenFileAndLog(fullFilePath);
-                }
+            }
+        }
+
+        private string FormatFileSize(long bytes)
+        {
+            if (bytes < 1024) return $"{bytes} B";
+            if (bytes < 1024 * 1024) return $"{bytes / 1024.0:F1} KB";
+            return $"{bytes / (1024.0 * 1024.0):F1} MB";
+        }
+
+        private void FileListView_DoubleClick(object sender, EventArgs e)
+        {
+            if (fileListView.SelectedItems.Count == 0) return;
+
+            ListViewItem item = fileListView.SelectedItems[0];
+            string fullPath = item.Tag as string;
+            if (string.IsNullOrEmpty(fullPath)) return;
+
+            if (item.ImageKey == "folder")
+            {
+                LoadDirectory(fullPath);
+            }
+            else
+            {
+                OpenFileAndLog(fullPath);
             }
         }
 
@@ -154,8 +374,8 @@ namespace CustomExplorerApp
         {
             try
             {
-                string logMessage;
                 string timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+                string logMessage;
 
                 if (AppSettings.LogFormat == "JSON")
                 {
@@ -166,8 +386,10 @@ namespace CustomExplorerApp
                 {
                     logMessage = $"[{timestamp}] OPENED: {filePath}{Environment.NewLine}";
                 }
-                
+
                 File.AppendAllText(AppSettings.LogFilePath, logMessage);
+
+                statusLabel.Text = $"Last opened: {Path.GetFileName(filePath)} at {timestamp}";
 
                 ProcessStartInfo psi = new ProcessStartInfo
                 {
@@ -178,7 +400,7 @@ namespace CustomExplorerApp
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Error opening file: " + ex.Message);
+                MessageBox.Show("Error opening file: " + ex.Message, "Notice", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
         }
     }

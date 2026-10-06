@@ -15,61 +15,153 @@ namespace CustomExplorerApp
 
         public WizardForm()
         {
-            this.Text = "Tracker Setup Wizard";
-            this.Size = new Size(400, 350);
+            this.Text = "LiveLog Explorer - Quick Setup";
+            this.Size = new Size(460, 420);
+            this.MinimumSize = new Size(460, 420);
+            this.MaximumSize = new Size(460, 420);
             this.StartPosition = FormStartPosition.CenterScreen;
+            this.FormBorderStyle = FormBorderStyle.FixedDialog;
+            this.MaximizeBox = false;
+            this.MinimizeBox = false;
+            this.BackColor = Color.FromArgb(248, 249, 252);
+            this.Font = new Font("Segoe UI", 9.5f, FontStyle.Regular);
 
-            int y = 20;
+            BuildUi();
+        }
 
-            // Web UI Checkbox
-            webUiCheck = new CheckBox { Text = "Enable Web Dashboard", Location = new Point(20, y), Checked = true, Width = 200 };
+        private void BuildUi()
+        {
+            // Header Banner
+            Panel headerPanel = new Panel();
+            headerPanel.Dock = DockStyle.Top;
+            headerPanel.Height = 70;
+            headerPanel.BackColor = Color.FromArgb(25, 30, 45);
+            headerPanel.Padding = new Padding(20, 14, 20, 10);
+
+            Label titleLabel = new Label();
+            titleLabel.Text = "LiveLog Explorer Setup";
+            titleLabel.Font = new Font("Segoe UI", 12f, FontStyle.Bold);
+            titleLabel.ForeColor = Color.White;
+            titleLabel.AutoSize = true;
+            headerPanel.Controls.Add(titleLabel);
+
+            Label subtitleLabel = new Label();
+            subtitleLabel.Text = "Configure tracking & dashboard preferences";
+            subtitleLabel.Font = new Font("Segoe UI", 9f);
+            subtitleLabel.ForeColor = Color.FromArgb(160, 175, 200);
+            subtitleLabel.Location = new Point(20, 38);
+            subtitleLabel.AutoSize = true;
+            headerPanel.Controls.Add(subtitleLabel);
+
+            this.Controls.Add(headerPanel);
+
+            // Content Panel
+            Panel contentPanel = new Panel();
+            contentPanel.Dock = DockStyle.Fill;
+            contentPanel.Padding = new Padding(24, 15, 24, 15);
+
+            int y = 85;
+
+            // Group 1: Web Dashboard Toggle
+            webUiCheck = new CheckBox();
+            webUiCheck.Text = "Enable Live Web Dashboard";
+            webUiCheck.Font = new Font("Segoe UI", 10f, FontStyle.Bold);
+            webUiCheck.ForeColor = Color.FromArgb(30, 35, 45);
+            webUiCheck.Location = new Point(25, y);
+            webUiCheck.Size = new Size(300, 24);
+            webUiCheck.Checked = true;
             this.Controls.Add(webUiCheck);
-            y += 40;
+            y += 35;
 
-            // Port
-            this.Controls.Add(new Label { Text = "Web Port:", Location = new Point(20, y), Width = 100 });
-            portText = new TextBox { Text = "9999", Location = new Point(130, y), Width = 100 };
+            // Group 2: Port
+            Label portLabel = new Label();
+            portLabel.Text = "Web Dashboard Port:";
+            portLabel.ForeColor = Color.FromArgb(70, 75, 85);
+            portLabel.Location = new Point(25, y);
+            portLabel.Size = new Size(160, 24);
+            this.Controls.Add(portLabel);
+
+            portText = new TextBox();
+            portText.Text = "9999";
+            portText.Location = new Point(190, y - 2);
+            portText.Size = new Size(90, 26);
+            portText.BorderStyle = BorderStyle.FixedSingle;
             this.Controls.Add(portText);
-            y += 40;
+            y += 38;
 
-            // Format
-            this.Controls.Add(new Label { Text = "Log Format:", Location = new Point(20, y), Width = 100 });
-            formatCombo = new ComboBox { Location = new Point(130, y), Width = 100, DropDownStyle = ComboBoxStyle.DropDownList };
+            // Group 3: Log Format
+            Label formatLabel = new Label();
+            formatLabel.Text = "Logging Format:";
+            formatLabel.ForeColor = Color.FromArgb(70, 75, 85);
+            formatLabel.Location = new Point(25, y);
+            formatLabel.Size = new Size(160, 24);
+            this.Controls.Add(formatLabel);
+
+            formatCombo = new ComboBox();
+            formatCombo.Location = new Point(190, y - 2);
+            formatCombo.Size = new Size(120, 26);
+            formatCombo.DropDownStyle = ComboBoxStyle.DropDownList;
             formatCombo.Items.AddRange(new object[] { "Text", "JSON" });
             formatCombo.SelectedIndex = 0;
             this.Controls.Add(formatCombo);
-            y += 40;
+            y += 42;
 
-            // Folder
-            this.Controls.Add(new Label { Text = "Default Project Folder:", Location = new Point(20, y), Width = 200 });
-            y += 25;
-            folderText = new TextBox { Location = new Point(20, y), Width = 250, ReadOnly = true };
+            // Group 4: Default Folder
+            Label folderLabel = new Label();
+            folderLabel.Text = "Initial Startup Folder (Optional):";
+            folderLabel.ForeColor = Color.FromArgb(70, 75, 85);
+            folderLabel.Location = new Point(25, y);
+            folderLabel.Size = new Size(300, 20);
+            this.Controls.Add(folderLabel);
+            y += 24;
+
+            folderText = new TextBox();
+            folderText.Location = new Point(25, y);
+            folderText.Size = new Size(295, 26);
+            folderText.BorderStyle = BorderStyle.FixedSingle;
+            folderText.ReadOnly = true;
+            folderText.BackColor = Color.White;
+            folderText.Text = @"C:\Users";
             this.Controls.Add(folderText);
-            
-            browseButton = new Button { Text = "Browse...", Location = new Point(280, y), Width = 80 };
+
+            browseButton = new Button();
+            browseButton.Text = "Browse...";
+            browseButton.Location = new Point(328, y - 1);
+            browseButton.Size = new Size(82, 28);
+            browseButton.FlatStyle = FlatStyle.Flat;
+            browseButton.BackColor = Color.FromArgb(235, 238, 245);
+            browseButton.ForeColor = Color.FromArgb(40, 45, 55);
+            browseButton.Cursor = Cursors.Hand;
             browseButton.Click += (s, e) => {
                 using (var fbd = new FolderBrowserDialog()) {
                     if (fbd.ShowDialog() == DialogResult.OK) folderText.Text = fbd.SelectedPath;
                 }
             };
             this.Controls.Add(browseButton);
-            y += 60;
+            y += 55;
 
-            // Start Button
-            startButton = new Button { Text = "Launch Tracker", Location = new Point(120, y), Width = 150, Height = 40, BackColor = Color.LightGreen };
+            // Launch Button
+            startButton = new Button();
+            startButton.Text = "🚀  Launch Explorer";
+            startButton.Location = new Point(25, y);
+            startButton.Size = new Size(385, 42);
+            startButton.FlatStyle = FlatStyle.Flat;
+            startButton.FlatAppearance.BorderSize = 0;
+            startButton.BackColor = Color.FromArgb(40, 110, 230);
+            startButton.ForeColor = Color.White;
+            startButton.Font = new Font("Segoe UI", 10.5f, FontStyle.Bold);
+            startButton.Cursor = Cursors.Hand;
             startButton.Click += StartButton_Click;
             this.Controls.Add(startButton);
         }
 
         private void StartButton_Click(object sender, EventArgs e)
         {
-            // Save choices to AppSettings
             AppSettings.EnableWebUI = webUiCheck.Checked;
             if (int.TryParse(portText.Text, out int port)) AppSettings.WebPort = port;
-            AppSettings.LogFormat = formatCombo.SelectedItem.ToString();
+            AppSettings.LogFormat = formatCombo.SelectedItem?.ToString() ?? "Text";
             AppSettings.DefaultFolder = folderText.Text;
-            
-            // Close wizard and tell Program.cs to continue
+
             this.DialogResult = DialogResult.OK;
             this.Close();
         }

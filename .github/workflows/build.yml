@@ -23,7 +23,7 @@ jobs:
 
       - name: Publish Single-File Executable
         run: |
-          dotnet publish CustomExplorerApp.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o ./publish-out
+          dotnet publish CustomExplorerApp.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:EnableCompressionInSingleFile=true -o ./publish-out
 
       - name: Update Latest Release
         uses: softprops/action-gh-release@v2

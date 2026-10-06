@@ -21,9 +21,18 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
+      - name: Calculate Dynamic Semantic Version
+        id: versioning
+        shell: bash
+        run: |
+          # Use 1.0.X where X is the GitHub run_number
+          VERSION="1.0.${{ github.run_number }}"
+          echo "APP_VERSION=${VERSION}" >> $GITHUB_ENV
+          echo "Calculated Version: ${VERSION}"
+
       - name: Publish Single-File Executable
         run: |
-          dotnet publish CustomExplorerApp.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:EnableCompressionInSingleFile=true -o ./publish-out
+          dotnet publish CustomExplorerApp.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:EnableCompressionInSingleFile=true -p:Version=${{ env.APP_VERSION }} -p:AssemblyVersion=${{ env.APP_VERSION }} -p:FileVersion=${{ env.APP_VERSION }} -o ./publish-out
 
       - name: Update Latest Release
         uses: softprops/action-gh-release@v2
@@ -31,10 +40,11 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: latest
-          name: "LiveLog Explorer v1.0.1"
+          name: "LiveLog Explorer v${{ env.APP_VERSION }}"
           body: |
-            version: 1.0.1
+            version: ${{ env.APP_VERSION }}
             commit: ${{ github.sha }}
+            run_number: ${{ github.run_number }}
           draft: false
           prerelease: false
           files: ./publish-out/LiveLog-Explorer.exe

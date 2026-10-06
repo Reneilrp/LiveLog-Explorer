@@ -29,7 +29,7 @@ namespace CustomExplorerApp
         private ImageList imageList;
         private ImageList sidebarImageList;
         private string currentDirectory = @"C:\Users";
-        private const string CurrentVersion = "1.0.1";
+        private static readonly string CurrentVersion = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "1.0.1";
         private string latestDownloadUrl = "";
         private NotifyIcon trayIcon;
         private ContextMenuStrip trayMenu;

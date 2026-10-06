@@ -575,6 +575,7 @@ namespace CustomExplorerApp
         private void ExitApplication()
         {
             isReallyClosing = true;
+            Program.StopWebServer();
             if (trayIcon != null)
             {
                 trayIcon.Visible = false;

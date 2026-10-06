@@ -10,11 +10,16 @@ namespace CustomExplorerApp
 {
     static class Program
     {
+        private static WebApplication? webApp;
+
         [STAThread]
         static void Main(string[] args)
         {
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
+
+            // Hook application exit to immediately terminate and release port
+            Application.ApplicationExit += (s, e) => StopWebServer();
 
             // 1. Show the Wizard first
             using (var wizard = new WizardForm())
@@ -32,7 +37,24 @@ namespace CustomExplorerApp
             }
 
             // 3. Start Main File Explorer
-            Application.Run(new MainForm()); 
+            Application.Run(new MainForm());
+
+            // Ensure web server is stopped after MainForm finishes
+            StopWebServer();
+        }
+
+        public static void StopWebServer()
+        {
+            try
+            {
+                if (webApp != null)
+                {
+                    var app = webApp;
+                    webApp = null;
+                    app.StopAsync().GetAwaiter().GetResult();
+                }
+            }
+            catch { }
         }
 
         static void StartWebServer(string[] args)
@@ -42,7 +64,8 @@ namespace CustomExplorerApp
                 var builder = WebApplication.CreateBuilder(args);
                 builder.Logging.ClearProviders(); // Suppress background logging console hooks
                 builder.WebHost.UseUrls($"http://127.0.0.1:{AppSettings.WebPort}");
-                var app = builder.Build();
+                webApp = builder.Build();
+                var app = webApp;
 
                 // --- ENDPOINT 1: Serve the beautifully styled HTML/JS page ---
                 app.MapGet("/", async context =>

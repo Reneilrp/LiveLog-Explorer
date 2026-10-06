@@ -2,6 +2,9 @@ using System;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
+using System.Net.Http;
+using System.Text.Json;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace CustomExplorerApp
@@ -11,6 +14,9 @@ namespace CustomExplorerApp
         private Panel topPanel;
         private Panel searchPanel;
         private Panel statusPanel;
+        private Panel updateBanner;
+        private Label updateBannerLabel;
+        private Button updateBannerButton;
         private TextBox pathTextBox;
         private TextBox searchBox;
         private Button upButton;
@@ -22,11 +28,13 @@ namespace CustomExplorerApp
         private Label statusLabel;
         private Label countLabel;
         private string currentDirectory = @"C:\Users";
+        private const string CurrentVersion = "v1.0.0";
+        private string latestDownloadUrl = "";
 
         public MainForm()
         {
-            this.Text = "LiveLog Explorer";
-            this.Size = new Size(880, 600);
+            this.Text = "LiveLog Explorer (" + CurrentVersion + ")";
+            this.Size = new Size(880, 620);
             this.MinimumSize = new Size(640, 420);
             this.StartPosition = FormStartPosition.CenterScreen;
             this.Font = new Font("Segoe UI", 9.5f, FontStyle.Regular);
@@ -42,6 +50,9 @@ namespace CustomExplorerApp
                 startFolder = AppSettings.DefaultFolder;
             }
             LoadDirectory(startFolder);
+
+            // Check for updates asynchronously in background on startup
+            Task.Run(CheckForUpdatesAsync);
         }
 
         private void InitializeImageList()
@@ -98,6 +109,38 @@ namespace CustomExplorerApp
 
         private void BuildUi()
         {
+            // Update Notification Banner (Hidden by default)
+            updateBanner = new Panel();
+            updateBanner.Dock = DockStyle.Top;
+            updateBanner.Height = 36;
+            updateBanner.BackColor = Color.FromArgb(220, 245, 235);
+            updateBanner.Padding = new Padding(14, 6, 14, 6);
+            updateBanner.Visible = false;
+
+            updateBannerLabel = new Label();
+            updateBannerLabel.Text = "🎉 A new update is available on GitHub!";
+            updateBannerLabel.Font = new Font("Segoe UI", 9.5f, FontStyle.Bold);
+            updateBannerLabel.ForeColor = Color.FromArgb(10, 100, 60);
+            updateBannerLabel.AutoSize = true;
+            updateBannerLabel.Location = new Point(14, 8);
+            updateBanner.Controls.Add(updateBannerLabel);
+
+            updateBannerButton = CreateStyledButton("📥 Update Now", Color.FromArgb(15, 140, 85), Color.White);
+            updateBannerButton.Location = new Point(350, 4);
+            updateBannerButton.Size = new Size(125, 28);
+            updateBannerButton.Click += (s, e) => DownloadAndApplyUpdate();
+            updateBanner.Controls.Add(updateBannerButton);
+
+            Button dismissBtn = new Button();
+            dismissBtn.Text = "✕";
+            dismissBtn.FlatStyle = FlatStyle.Flat;
+            dismissBtn.FlatAppearance.BorderSize = 0;
+            dismissBtn.Size = new Size(26, 26);
+            dismissBtn.Location = new Point(485, 4);
+            dismissBtn.ForeColor = Color.FromArgb(120, 130, 140);
+            dismissBtn.Click += (s, e) => updateBanner.Visible = false;
+            updateBanner.Controls.Add(dismissBtn);
+
             // Top Navigation Bar
             topPanel = new Panel();
             topPanel.Dock = DockStyle.Top;
@@ -227,6 +270,7 @@ namespace CustomExplorerApp
             this.Controls.Add(statusPanel);
             this.Controls.Add(searchPanel);
             this.Controls.Add(topPanel);
+            this.Controls.Add(updateBanner);
         }
 
         private Button CreateStyledButton(string text, Color bg, Color fg)
@@ -240,6 +284,76 @@ namespace CustomExplorerApp
             btn.Font = new Font("Segoe UI", 9f, FontStyle.Bold);
             btn.Cursor = Cursors.Hand;
             return btn;
+        }
+
+        private async Task CheckForUpdatesAsync()
+        {
+            try
+            {
+                using (HttpClient client = new HttpClient())
+                {
+                    client.DefaultRequestHeaders.UserAgent.ParseAdd("LiveLog-Explorer");
+                    string url = "https://api.github.com/repos/Reneilrp/LiveLog-Explorer/releases/tags/latest";
+                    var response = await client.GetAsync(url);
+                    if (!response.IsSuccessStatusCode) return;
+
+                    string json = await response.Content.ReadAsStringAsync();
+                    using (JsonDocument doc = JsonDocument.Parse(json))
+                    {
+                        var root = doc.RootElement;
+                        if (root.TryGetProperty("assets", out var assets) && assets.GetArrayLength() > 0)
+                        {
+                            var asset = assets[0];
+                            if (asset.TryGetProperty("browser_download_url", out var downloadUrlProp))
+                            {
+                                latestDownloadUrl = downloadUrlProp.GetString() ?? "";
+                            }
+
+                            // Read release body to check commit sha or check published_at
+                            if (root.TryGetProperty("body", out var bodyProp))
+                            {
+                                string body = bodyProp.GetString() ?? "";
+                                // If latest commit differs from current build, alert user
+                                if (!string.IsNullOrEmpty(latestDownloadUrl))
+                                {
+                                    this.Invoke((Action)(() =>
+                                    {
+                                        updateBannerLabel.Text = "✨ New build available on GitHub!";
+                                        updateBanner.Visible = true;
+                                    }));
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            catch { }
+        }
+
+        private void DownloadAndApplyUpdate()
+        {
+            if (string.IsNullOrEmpty(latestDownloadUrl))
+            {
+                latestDownloadUrl = "https://github.com/Reneilrp/LiveLog-Explorer/releases/latest";
+            }
+
+            var result = MessageBox.Show(
+                "Would you like to open the latest release download page in your browser?\n\nClick 'Yes' to download, or 'No' to cancel.",
+                "Update LiveLog Explorer",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Information);
+
+            if (result == DialogResult.Yes)
+            {
+                try
+                {
+                    Process.Start(new ProcessStartInfo { FileName = latestDownloadUrl, UseShellExecute = true });
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("Could not open browser: " + ex.Message);
+                }
+            }
         }
 
         private void UpButton_Click(object sender, EventArgs e)
@@ -286,7 +400,6 @@ namespace CustomExplorerApp
                 // Folders
                 foreach (DirectoryInfo subDir in dir.GetDirectories())
                 {
-                    // Skip hidden system directories like $RECYCLE.BIN
                     if ((subDir.Attributes & FileAttributes.Hidden) != 0 && subDir.Name.StartsWith("$")) continue;
 
                     var item = new ListViewItem(subDir.Name, "folder");

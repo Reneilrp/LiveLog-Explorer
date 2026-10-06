@@ -30,6 +30,9 @@ namespace CustomExplorerApp
         private string currentDirectory = @"C:\Users";
         private const string CurrentVersion = "v1.0.0";
         private string latestDownloadUrl = "";
+        private NotifyIcon trayIcon;
+        private ContextMenuStrip trayMenu;
+        private bool isReallyClosing = false;
 
         public MainForm()
         {
@@ -41,6 +44,7 @@ namespace CustomExplorerApp
             this.BackColor = Color.FromArgb(245, 246, 250);
 
             InitializeImageList();
+            InitializeSystemTray();
             BuildUi();
 
             // Set starting directory from settings or default
@@ -515,6 +519,63 @@ namespace CustomExplorerApp
             {
                 MessageBox.Show("Error opening file: " + ex.Message, "Notice", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
+        }
+
+        private void InitializeSystemTray()
+        {
+            trayMenu = new ContextMenuStrip();
+            trayMenu.Items.Add("📂 Open Explorer", null, (s, e) => RestoreFromTray());
+            trayMenu.Items.Add("🌐 Open Dashboard", null, (s, e) => {
+                if (AppSettings.EnableWebUI)
+                    Process.Start(new ProcessStartInfo { FileName = $"http://localhost:{AppSettings.WebPort}", UseShellExecute = true });
+            });
+            trayMenu.Items.Add(new ToolStripSeparator());
+            trayMenu.Items.Add("❌ Exit Completely", null, (s, e) => ExitApplication());
+
+            trayIcon = new NotifyIcon();
+            trayIcon.Text = "LiveLog Explorer (Running)";
+            trayIcon.Icon = SystemIcons.Application;
+            trayIcon.ContextMenuStrip = trayMenu;
+            trayIcon.Visible = true;
+            trayIcon.DoubleClick += (s, e) => RestoreFromTray();
+        }
+
+        protected override void OnFormClosing(FormClosingEventArgs e)
+        {
+            if (!isReallyClosing && e.CloseReason == CloseReason.UserClosing)
+            {
+                e.Cancel = true;
+                this.Hide();
+                trayIcon.ShowBalloonTip(2000, "LiveLog Explorer", "Minimized to tray. Live web server & tracking are still active in background.", ToolTipIcon.Info);
+            }
+            else
+            {
+                if (trayIcon != null)
+                {
+                    trayIcon.Visible = false;
+                    trayIcon.Dispose();
+                }
+                base.OnFormClosing(e);
+            }
+        }
+
+        private void RestoreFromTray()
+        {
+            this.Show();
+            this.WindowState = FormWindowState.Normal;
+            this.BringToFront();
+            this.Activate();
+        }
+
+        private void ExitApplication()
+        {
+            isReallyClosing = true;
+            if (trayIcon != null)
+            {
+                trayIcon.Visible = false;
+                trayIcon.Dispose();
+            }
+            Application.Exit();
         }
     }
 }
